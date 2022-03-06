@@ -231,3 +231,4 @@ Received Import Request.
 Start importing Assets/SoundFX using Guid(4208d6c5689855644958d537e97af908) Importer(815301076,1909f56bfc062723c751e8b465ee728b)  -> (artifact id: 'd6d19a74442274a27b89d94f62309f40') in 0.010134 seconds 
   Import took 0.013014 seconds .
 
+AssetImportWorkerClient::OnTransportError - code=2 error=End of file
