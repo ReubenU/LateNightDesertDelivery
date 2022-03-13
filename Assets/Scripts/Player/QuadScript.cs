@@ -34,6 +34,16 @@ public class QuadScript : MonoBehaviour
     // ATV Quad Engine Settings
     public float torque;
 
+    // ATV Quad Animator
+    public Animator quadAnimator;
+
+    // Girl's animation settings
+    public Animator girlAnimator;
+
+
+    // Quad sound
+    public AudioSource quadAudio;
+
     private void Awake()
     {
         rigid = GetComponent<Rigidbody>();
@@ -62,18 +72,33 @@ public class QuadScript : MonoBehaviour
 
     private void FixedUpdate()
     {
+        // This should be normal state
         Accelerate();
     }
 
     private void Update()
     {
+        // This should be the normal state.
         Steer();
+        AnimateGirl();
+        AnimateQuad();
+        QuadEngineSpeed();
     }
 
 
     // All wheel steering
     private float currentAngle = 0f;
     private float angleVel = 0f;
+    private float steerSmooth = .5f;
+    private float leftStickDeadZone = 0.15f;
+
+    // Girl steering animation variables
+    private float girlAnimSteer = 0.5f; // 0 is left, .5 is center, 1 is right
+    private float animSpeed = 0f;
+    private float animSmooth = 3f;
+
+    // Quad steering animation variables
+    private float quadAnimSteer = 0f;
     void Steer()
     {
         // Get the general direction we want to move towards...
@@ -92,11 +117,24 @@ public class QuadScript : MonoBehaviour
         // Thanks u/ActionScripter9109.
         float angle = AngleBetweenVectors(quadDir, moveDirection, transform.TransformDirection(Vector3.up)) * Mathf.Rad2Deg;
 
+        // Check if left stick is let go:
+        if (moveStickVal.magnitude <= leftStickDeadZone)
+        {
+            currentAngle = 0;
+        }
+
         // Smooth the steering angle so the quad isn't so spastic.
-        currentAngle = Mathf.SmoothDampAngle(currentAngle, angle, ref angleVel, 2f * Time.deltaTime);
+        currentAngle = Mathf.SmoothDampAngle(currentAngle, angle, ref angleVel, steerSmooth * Time.deltaTime);
 
         // Apply steering only when accelerating.
         float finalSteerAngle = currentAngle * moveStickVal.magnitude;
+
+        // Set girl's steering frame...
+        float animAngle = Map2Range(angle / 90f, -1f, 1f, 0, 1f);
+        girlAnimSteer = Mathf.SmoothDamp(girlAnimSteer, animAngle, ref animSpeed, animSmooth * Time.deltaTime);
+
+        // Set the quad's steering frame...
+        quadAnimSteer = angle;
 
         // Apply the steering angle to each and every wheel with
         // their custom min and max steering angles.
@@ -119,7 +157,6 @@ public class QuadScript : MonoBehaviour
         Vector3 cross = Vector3.Cross(v1, v2);
         float dot = Vector3.Dot(v1, v2);
         float angle = Mathf.Atan2(cross.magnitude, dot);
-        //float test = Vector3.Dot(up, cross);
 
         //if (test < 0f) angle = -angle;
         angle *= Mathf.Sign(Vector3.Dot(up, cross));
@@ -132,7 +169,6 @@ public class QuadScript : MonoBehaviour
     void Accelerate()
     {
         float horsepower = torque * move.ReadValue<Vector2>().magnitude;
-        float braking = torque * (1f - move.ReadValue<Vector2>().magnitude);
 
         frontLeft.motorTorque = horsepower;
         frontRight.motorTorque = horsepower;
@@ -143,5 +179,36 @@ public class QuadScript : MonoBehaviour
         //frontRight.brakeTorque = braking;
         //rearLeft.brakeTorque = braking;
         //rearRight.brakeTorque = braking;
+    }
+
+    // Animate girl steering
+    void AnimateGirl()
+    {
+        girlAnimator.SetFloat("SteerPercent", girlAnimSteer);
+    }
+
+    // Animate quad steering
+    void AnimateQuad()
+    {
+        quadAnimator.SetFloat("Steering", girlAnimSteer);
+    }
+
+    // Adjust engine audio
+    float maxSpeed = 100;
+    void QuadEngineSpeed()
+    {
+        Vector3 localSpeed = transform.InverseTransformDirection(rigid.velocity);
+        float speed = Mathf.Abs(localSpeed.z * 2.23694f);
+
+        speed = Mathf.Clamp(speed, 0, maxSpeed);
+
+        float pitchThrottle = Map2Range(speed, 0, maxSpeed, 1, 3);
+
+        quadAudio.pitch = pitchThrottle;
+    }
+
+    float Map2Range(float inpVal, float frmMin, float frmMax, float toMin, float toMax)
+    {
+        return (inpVal - frmMin) / (frmMax - frmMin) * (toMax - toMin) + toMin;
     }
 }
