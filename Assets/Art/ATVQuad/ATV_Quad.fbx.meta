@@ -6,7 +6,12 @@ ModelImporter:
   - first:
       74: -5155585314049395855
     second: BikeRig|QuadAnim
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: QuadMat
+    second: {fileID: 2100000, guid: 87cf77c04b8d26d43baec1272d05b4bd, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

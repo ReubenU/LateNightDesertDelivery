@@ -3,7 +3,12 @@ guid: 085b129501c8ffd4297ec02cae27f3ec
 ModelImporter:
   serializedVersion: 20200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Yurt
+    second: {fileID: 2100000, guid: 1f84983df92ef024a8c8272560a7de48, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

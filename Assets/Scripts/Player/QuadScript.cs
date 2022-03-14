@@ -6,6 +6,8 @@ public class QuadScript : MonoBehaviour
     // Main Rigidbody variable
     Rigidbody rigid;
 
+    bool isQuadColliding = false;
+
     // Quad's center of mass
     public Transform centerOfMass;
 
@@ -16,6 +18,8 @@ public class QuadScript : MonoBehaviour
     public QuadControls quadControls;
 
     private InputAction move;
+    private InputAction brake;
+    private InputAction reverse;
 
     // Wheels for us to control.
     // REMEMBER: 
@@ -40,9 +44,26 @@ public class QuadScript : MonoBehaviour
     // Girl's animation settings
     public Animator girlAnimator;
 
+    // Girl's Ragdoll settings
+    public GirlStates girlRagdoller;
+
+    public Transform girlPelvis;
 
     // Quad sound
     public AudioSource quadAudio;
+
+
+    [HideInInspector]
+    // Quad States and State Machine
+    public enum QuadStates : int
+    {
+        Active = 0,
+        Crash = 1
+    }
+    [HideInInspector]
+    public QuadStates state;
+
+
 
     private void Awake()
     {
@@ -51,6 +72,8 @@ public class QuadScript : MonoBehaviour
         rigid.centerOfMass = centerOfMass.localPosition;
 
         quadControls = new QuadControls();
+
+        state = QuadStates.Active;
     }
 
     // Enable all quad controls
@@ -59,7 +82,12 @@ public class QuadScript : MonoBehaviour
         quadControls.Enable();
 
         move = quadControls.Player.Move;
+        brake = quadControls.Player.Brake;
+        reverse = quadControls.Player.Reverse;
+
         move.Enable();
+        brake.Enable();
+        reverse.Enable();
     }
 
     // Disable all controls
@@ -68,21 +96,61 @@ public class QuadScript : MonoBehaviour
         quadControls.Disable();
 
         move.Disable();
+        brake.Disable();
+        reverse.Disable();
     }
 
     private void FixedUpdate()
     {
-        // This should be normal state
-        Accelerate();
+        switch (state)
+        {
+            case QuadStates.Active:
+                Accelerate();
+                break;
+            case QuadStates.Crash:
+                CrashState();
+                break;
+            default:
+                break;
+        }
     }
 
     private void Update()
     {
+        switch (state)
+        {
+            case QuadStates.Active:
+                NormalState();
+                break;
+            case QuadStates.Crash:
+                CrashState();
+                break;
+            default:
+                break;
+        }
+    }
+
+
+    Vector3 deltaVelocity = Vector3.zero;
+    private void LateUpdate()
+    {
+        RagdollGirl();
+    }
+
+
+    void NormalState()
+    {
         // This should be the normal state.
         Steer();
+        Brake();
         AnimateGirl();
         AnimateQuad();
-        QuadEngineSpeed();
+        QuadEngineAudio();
+    }
+
+    void CrashState()
+    {
+
     }
 
 
@@ -169,16 +237,22 @@ public class QuadScript : MonoBehaviour
     void Accelerate()
     {
         float horsepower = torque * move.ReadValue<Vector2>().magnitude;
+        float isReversed = (Mathf.Round(reverse.ReadValue<float>()) > 0) ? -torque * reverse.ReadValue<float>() : horsepower;
 
-        frontLeft.motorTorque = horsepower;
-        frontRight.motorTorque = horsepower;
-        rearLeft.motorTorque = horsepower;
-        rearRight.motorTorque = horsepower;
+        frontLeft.motorTorque = isReversed;
+        frontRight.motorTorque = isReversed;
+        rearLeft.motorTorque = isReversed;
+        rearRight.motorTorque = isReversed;
+    }
 
-        //frontLeft.brakeTorque = braking;
-        //frontRight.brakeTorque = braking;
-        //rearLeft.brakeTorque = braking;
-        //rearRight.brakeTorque = braking;
+    void Brake()
+    {
+        float braking = 2*torque * brake.ReadValue<float>();
+
+        frontLeft.brakeTorque = braking;
+        frontRight.brakeTorque = braking;
+        rearLeft.brakeTorque = braking;
+        rearRight.brakeTorque = braking;
     }
 
     // Animate girl steering
@@ -186,6 +260,33 @@ public class QuadScript : MonoBehaviour
     {
         girlAnimator.SetFloat("SteerPercent", girlAnimSteer);
     }
+
+    // Ragdoll girl when crashing at high speed
+    int maxCrashForce = 10;
+    void RagdollGirl()
+    {
+        if (!isQuadColliding)
+        {
+            deltaVelocity = rigid.velocity;
+        }
+        else
+        {
+            if (deltaVelocity.magnitude > rigid.velocity.magnitude + maxCrashForce)
+            {
+                girlRagdoller.activateRagdoll = true;
+                girlRagdoller.inheritedVelocity = deltaVelocity * .5f;
+                girlRagdoller.RagdollModeOn();
+
+                // Change state:
+                state = QuadStates.Crash;
+
+                camControl.GetComponent<CamControls>().targetVehicle = girlPelvis;
+            }
+        }
+    }
+
+    // Penalty function
+
 
     // Animate quad steering
     void AnimateQuad()
@@ -195,7 +296,7 @@ public class QuadScript : MonoBehaviour
 
     // Adjust engine audio
     float maxSpeed = 100;
-    void QuadEngineSpeed()
+    void QuadEngineAudio()
     {
         Vector3 localSpeed = transform.InverseTransformDirection(rigid.velocity);
         float speed = Mathf.Abs(localSpeed.z * 2.23694f);
@@ -204,11 +305,22 @@ public class QuadScript : MonoBehaviour
 
         float pitchThrottle = Map2Range(speed, 0, maxSpeed, 1, 3);
 
+        pitchThrottle = (Mathf.Round(brake.ReadValue<float>()) > 0) ? 1 : pitchThrottle;
         quadAudio.pitch = pitchThrottle;
     }
 
     float Map2Range(float inpVal, float frmMin, float frmMax, float toMin, float toMax)
     {
         return (inpVal - frmMin) / (frmMax - frmMin) * (toMax - toMin) + toMin;
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        isQuadColliding = true;
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        isQuadColliding = false;
     }
 }
