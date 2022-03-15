@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
 public class IngameUI : MonoBehaviour
@@ -13,6 +14,11 @@ public class IngameUI : MonoBehaviour
     private QuadControls quadControls;
     private InputAction pauseGame;
 
+    // UI Navigation stuff...
+    public EventSystem uiEventSystem;
+
+    public GameObject selectedCrashButton;
+    public GameObject selectedPauseButton;
 
     private void Awake()
     {
@@ -33,26 +39,31 @@ public class IngameUI : MonoBehaviour
     }
 
     bool isPaused = false;
+    bool activeOnce = false;
     private void Update()
     {
         // Crash bike
-        if (atvBike.state == QuadScript.QuadStates.Crash)
+        if (atvBike.state == QuadScript.QuadStates.Crash && !activeOnce)
         {
             GameOverScreen.SetActive(true);
             IngameScreen.SetActive(false);
+            uiEventSystem.SetSelectedGameObject(selectedCrashButton);
+            activeOnce = true;
         }
 
         // Pause game
         if (pauseGame.triggered)
         {
             isPaused = !isPaused;
+            uiEventSystem.SetSelectedGameObject(selectedPauseButton);
         }
         
-        if (isPaused)
+        if (isPaused && !activeOnce)
         {
             PauseScreen.SetActive(true);
             IngameScreen.SetActive(false);
             Time.timeScale = 0f;
+            activeOnce = !activeOnce;
         }
 
         // Unpause game
@@ -61,6 +72,7 @@ public class IngameUI : MonoBehaviour
             PauseScreen.SetActive(false);
             IngameScreen.SetActive(true);
             Time.timeScale = 1f;
+            activeOnce = false;
         }
     }
 

@@ -32,7 +32,7 @@ public class WheelCollision : MonoBehaviour
         }
         else
         {
-            Vector3 downVec = parentWheelCollider.transform.TransformDirection(Vector3.down) * .25f;
+            Vector3 downVec = parentWheelCollider.transform.TransformDirection(Vector3.down) * 1.25f;
             transform.position = parentWheelCollider.transform.position + downVec;
             transform.rotation = parentWheelCollider.transform.rotation;
         }

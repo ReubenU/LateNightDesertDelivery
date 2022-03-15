@@ -19,7 +19,8 @@ public class QuadScript : MonoBehaviour
 
     private InputAction move;
     private InputAction brake;
-    private InputAction reverse;
+    private InputAction keyMove;
+    private InputAction keyBrake;
 
     // Wheels for us to control.
     // REMEMBER: 
@@ -53,6 +54,8 @@ public class QuadScript : MonoBehaviour
     public AudioSource quadAudio;
 
 
+    bool useController = true;
+
     [HideInInspector]
     // Quad States and State Machine
     public enum QuadStates : int
@@ -67,6 +70,8 @@ public class QuadScript : MonoBehaviour
 
     private void Awake()
     {
+        useController = (PlayerPrefs.GetInt("UseController") == 1)? true : false;
+
         rigid = GetComponent<Rigidbody>();
 
         rigid.centerOfMass = centerOfMass.localPosition;
@@ -83,11 +88,14 @@ public class QuadScript : MonoBehaviour
 
         move = quadControls.Player.Move;
         brake = quadControls.Player.Brake;
-        reverse = quadControls.Player.Reverse;
+        keyMove = quadControls.Player.KeyMove;
+        keyBrake = quadControls.Player.KeyBrake;
 
         move.Enable();
         brake.Enable();
-        reverse.Enable();
+
+        keyMove.Enable();
+        keyBrake.Enable();
     }
 
     // Disable all controls
@@ -97,7 +105,9 @@ public class QuadScript : MonoBehaviour
 
         move.Disable();
         brake.Disable();
-        reverse.Disable();
+
+        keyMove.Disable();
+        keyBrake.Disable();
     }
 
     private void FixedUpdate()
@@ -164,14 +174,15 @@ public class QuadScript : MonoBehaviour
     private float girlAnimSteer = 0.5f; // 0 is left, .5 is center, 1 is right
     private float animSpeed = 0f;
     private float animSmooth = 3f;
-
-    // Quad steering animation variables
-    private float quadAnimSteer = 0f;
     void Steer()
     {
         // Get the general direction we want to move towards...
-        Vector3 moveStickVal = new Vector3(move.ReadValue<Vector2>().x, 0, move.ReadValue<Vector2>().y);
-        Vector3 moveDirection = camControl.TransformDirection(moveStickVal);
+        Vector3 moveStickVal = new Vector3(0, 0, Mathf.Abs(move.ReadValue<Vector2>().y));
+        Vector3 moveKeyVal = new Vector3(0, 0, Mathf.Abs(keyMove.ReadValue<Vector2>().y));
+
+        Vector3 bestMoveInput = (moveStickVal.magnitude > moveKeyVal.magnitude) ? moveStickVal : moveKeyVal;
+
+        Vector3 moveDirection = camControl.TransformDirection(bestMoveInput);
         moveDirection.y = 0;
         moveDirection = moveDirection.normalized;
 
@@ -183,26 +194,28 @@ public class QuadScript : MonoBehaviour
         // Find the angle between two vectors using a custom function
         // because Unity is too retarded to do precise calculations.
         // Thanks u/ActionScripter9109.
-        float angle = AngleBetweenVectors(quadDir, moveDirection, transform.TransformDirection(Vector3.up)) * Mathf.Rad2Deg;
+        float bestDir = (Mathf.Abs(move.ReadValue<Vector2>().y) > Mathf.Abs(keyMove.ReadValue<Vector2>().y)) ? move.ReadValue<Vector2>().y : keyMove.ReadValue<Vector2>().y;
+        Debug.Log(bestDir);
+        float angle = AngleBetweenVectors(quadDir, moveDirection, transform.TransformDirection(Vector3.up)) * Mathf.Rad2Deg * bestDir;
+
+        angle = Loop2Range(angle, -180, 180);
 
         // Check if left stick is let go:
-        if (moveStickVal.magnitude <= leftStickDeadZone)
+        if (bestMoveInput.magnitude <= leftStickDeadZone)
         {
             currentAngle = 0;
         }
 
         // Smooth the steering angle so the quad isn't so spastic.
         currentAngle = Mathf.SmoothDampAngle(currentAngle, angle, ref angleVel, steerSmooth * Time.deltaTime);
+        currentAngle = Map2Range(currentAngle, -360, 360, -180, 180);
 
         // Apply steering only when accelerating.
-        float finalSteerAngle = currentAngle * moveStickVal.magnitude;
+        float finalSteerAngle = currentAngle * bestMoveInput.magnitude;
 
         // Set girl's steering frame...
-        float animAngle = Map2Range(angle / 90f, -1f, 1f, 0, 1f);
+        float animAngle = Map2Range(angle/180, -1f, 1f, 0, 1f);
         girlAnimSteer = Mathf.SmoothDamp(girlAnimSteer, animAngle, ref animSpeed, animSmooth * Time.deltaTime);
-
-        // Set the quad's steering frame...
-        quadAnimSteer = angle;
 
         // Apply the steering angle to each and every wheel with
         // their custom min and max steering angles.
@@ -236,18 +249,31 @@ public class QuadScript : MonoBehaviour
 
     void Accelerate()
     {
-        float horsepower = torque * move.ReadValue<Vector2>().magnitude;
-        float isReversed = (Mathf.Round(reverse.ReadValue<float>()) > 0) ? -torque * reverse.ReadValue<float>() : horsepower;
+        float gamepadGas = move.ReadValue<Vector2>().y;
+        float keyboardGas = keyMove.ReadValue<Vector2>().y;
 
-        frontLeft.motorTorque = isReversed;
-        frontRight.motorTorque = isReversed;
-        rearLeft.motorTorque = isReversed;
-        rearRight.motorTorque = isReversed;
+        float bestGas = (Mathf.Abs(gamepadGas) > Mathf.Abs(keyboardGas)) ? gamepadGas : keyboardGas;
+
+        Vector3 localSpeed = transform.InverseTransformDirection(rigid.velocity);
+
+        float speedDelta = Mathf.Clamp(Mathf.Abs(localSpeed.z), 1, Mathf.Infinity);
+
+        float horsepower = (torque-speedDelta) * bestGas;
+
+        frontLeft.motorTorque = horsepower;
+        frontRight.motorTorque = horsepower;
+        rearLeft.motorTorque = horsepower;
+        rearRight.motorTorque = horsepower;
     }
 
     void Brake()
     {
-        float braking = 2*torque * brake.ReadValue<float>();
+        float triggerBrake = brake.ReadValue<float>();
+        float keyboardBrake = keyBrake.ReadValue<float>();
+
+        float bestBrakeInput = (Mathf.Abs(triggerBrake) > Mathf.Abs(keyboardBrake)) ? triggerBrake : keyboardBrake;
+
+        float braking = 2*torque * bestBrakeInput;
 
         frontLeft.brakeTorque = braking;
         frontRight.brakeTorque = braking;
@@ -281,6 +307,7 @@ public class QuadScript : MonoBehaviour
                 state = QuadStates.Crash;
 
                 camControl.GetComponent<CamControls>().targetVehicle = girlPelvis;
+                camControl.GetComponentInChildren<Light>().enabled = true;
             }
         }
     }
@@ -322,5 +349,15 @@ public class QuadScript : MonoBehaviour
     private void OnCollisionExit(Collision collision)
     {
         isQuadColliding = false;
+    }
+
+    // Helper functions
+    float Loop2Range(float inputVal, float minVal, float maxVal)
+    {
+        float isMaxxed = (inputVal > maxVal) ? minVal : 0;
+        float isMinned = (inputVal < minVal) ? maxVal : 0;
+        float Default = (inputVal < maxVal && inputVal > minVal) ? inputVal : 0;
+
+        return isMaxxed + isMinned + Default;
     }
 }
