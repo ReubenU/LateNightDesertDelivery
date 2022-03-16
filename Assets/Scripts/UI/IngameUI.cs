@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -7,6 +8,7 @@ public class IngameUI : MonoBehaviour
 {
     public GameObject GameOverScreen;
     public GameObject PauseScreen;
+    public GameObject SettingsScreen;
     public GameObject IngameScreen;
 
     public QuadScript atvBike;
@@ -47,7 +49,7 @@ public class IngameUI : MonoBehaviour
         {
             GameOverScreen.SetActive(true);
             IngameScreen.SetActive(false);
-            uiEventSystem.SetSelectedGameObject(selectedCrashButton);
+            uiEventSystem.SetSelectedGameObject(FirstButton(GameOverScreen));
             activeOnce = true;
         }
 
@@ -55,13 +57,14 @@ public class IngameUI : MonoBehaviour
         if (pauseGame.triggered)
         {
             isPaused = !isPaused;
-            uiEventSystem.SetSelectedGameObject(selectedPauseButton);
+            uiEventSystem.SetSelectedGameObject(FirstButton(PauseScreen));
         }
         
         if (isPaused && !activeOnce)
         {
             PauseScreen.SetActive(true);
             IngameScreen.SetActive(false);
+            SettingsScreen.SetActive(false);
             Time.timeScale = 0f;
             activeOnce = !activeOnce;
         }
@@ -70,6 +73,7 @@ public class IngameUI : MonoBehaviour
         if (isPaused == false && GameOverScreen.activeSelf == false)
         {
             PauseScreen.SetActive(false);
+            SettingsScreen.SetActive(false);
             IngameScreen.SetActive(true);
             Time.timeScale = 1f;
             activeOnce = false;
@@ -85,6 +89,21 @@ public class IngameUI : MonoBehaviour
         Time.timeScale = 1f;
     }
 
+    // Settings function
+    public void OpenSettings()
+    {
+        PauseScreen.SetActive(false);
+        SettingsScreen.SetActive(true);
+        uiEventSystem.SetSelectedGameObject(FirstButton(SettingsScreen));
+    }
+
+    public void CloseSettings()
+    {
+        PauseScreen.SetActive(true);
+        SettingsScreen.SetActive(false);
+        uiEventSystem.SetSelectedGameObject(FirstButton(PauseScreen));
+    }
+
     public void RetryGame()
     {
         SceneManager.LoadScene(1);
@@ -93,5 +112,17 @@ public class IngameUI : MonoBehaviour
     public void Quit2MainMenu()
     {
         SceneManager.LoadScene(0);
+    }
+
+    GameObject FirstButton(GameObject parentPanel)
+    {
+        Button[] buttons = parentPanel.GetComponentsInChildren<Button>();
+
+        if (buttons.Length > 0)
+        {
+            return buttons[0].gameObject;
+        }
+
+        return uiEventSystem.firstSelectedGameObject;
     }
 }

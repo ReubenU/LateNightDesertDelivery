@@ -3,7 +3,7 @@ using UnityEngine;
 public class Delivery : MonoBehaviour
 {
     public int points = 50;
-    public int addTime = 30;
+    private int addTime = 20;
 
     public Scoring scoreboard;
 
@@ -22,6 +22,7 @@ public class Delivery : MonoBehaviour
         if (isActive && !isCompleted)
         {
             scoreboard.currentScore += points;
+            scoreboard.time2ride += addTime;
             isActive = false;
             isCompleted = true;
             SpawnPackages();

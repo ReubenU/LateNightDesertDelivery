@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
 public class CamControls : MonoBehaviour
@@ -7,14 +8,20 @@ public class CamControls : MonoBehaviour
     private InputAction look;
     private InputAction mouseLook;
 
-    public float mouse_look_sens = 3f;
-    public float gamepad_look_sens = 30f;
+    public Slider gamepadSlider;
+    public Slider mouseSlider;
+
+    float mouse_look_sens = 3f;
+    float gamepad_look_sens = 30f;
 
     public Transform targetVehicle;
 
     private void Awake()
     {
         quadControls = new QuadControls();
+
+        mouse_look_sens = mouseSlider.value;
+        gamepad_look_sens = gamepadSlider.value;
     }
 
     private void OnEnable()
@@ -40,6 +47,9 @@ public class CamControls : MonoBehaviour
     {
         LookAround();
         LockOnVehicle();
+
+        mouse_look_sens = mouseSlider.value;
+        gamepad_look_sens = gamepadSlider.value;
     }
 
     void LookAround()

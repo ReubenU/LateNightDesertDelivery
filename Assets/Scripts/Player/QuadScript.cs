@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
 public class QuadScript : MonoBehaviour
@@ -54,7 +55,8 @@ public class QuadScript : MonoBehaviour
     public AudioSource quadAudio;
 
 
-    bool useController = true;
+    // Scoring and timing
+    public Scoring scoreboard;
 
     [HideInInspector]
     // Quad States and State Machine
@@ -66,12 +68,10 @@ public class QuadScript : MonoBehaviour
     [HideInInspector]
     public QuadStates state;
 
-
+    public Text gameOverMessage;
 
     private void Awake()
     {
-        useController = (PlayerPrefs.GetInt("UseController") == 1)? true : false;
-
         rigid = GetComponent<Rigidbody>();
 
         rigid.centerOfMass = centerOfMass.localPosition;
@@ -156,6 +156,9 @@ public class QuadScript : MonoBehaviour
         AnimateGirl();
         AnimateQuad();
         QuadEngineAudio();
+
+        // Scoring and timing
+        OuttaTime();
     }
 
     void CrashState()
@@ -195,7 +198,6 @@ public class QuadScript : MonoBehaviour
         // because Unity is too retarded to do precise calculations.
         // Thanks u/ActionScripter9109.
         float bestDir = (Mathf.Abs(move.ReadValue<Vector2>().y) > Mathf.Abs(keyMove.ReadValue<Vector2>().y)) ? move.ReadValue<Vector2>().y : keyMove.ReadValue<Vector2>().y;
-        Debug.Log(bestDir);
         float angle = AngleBetweenVectors(quadDir, moveDirection, transform.TransformDirection(Vector3.up)) * Mathf.Rad2Deg * bestDir;
 
         angle = Loop2Range(angle, -180, 180);
@@ -214,7 +216,7 @@ public class QuadScript : MonoBehaviour
         float finalSteerAngle = currentAngle * bestMoveInput.magnitude;
 
         // Set girl's steering frame...
-        float animAngle = Map2Range(angle/180, -1f, 1f, 0, 1f);
+        float animAngle = Map2Range(Mathf.Clamp(angle, -90, 90), -90, 90, 0, 1);
         girlAnimSteer = Mathf.SmoothDamp(girlAnimSteer, animAngle, ref animSpeed, animSmooth * Time.deltaTime);
 
         // Apply the steering angle to each and every wheel with
@@ -247,12 +249,20 @@ public class QuadScript : MonoBehaviour
     }
 
 
+    float currentGas = 0f;
+    float gasVelocity = 0f;
+    float gasSmooth = 1f;
     void Accelerate()
     {
         float gamepadGas = move.ReadValue<Vector2>().y;
         float keyboardGas = keyMove.ReadValue<Vector2>().y;
 
-        float bestGas = (Mathf.Abs(gamepadGas) > Mathf.Abs(keyboardGas)) ? gamepadGas : keyboardGas;
+        float bestGas = (Mathf.Abs(gamepadGas) > Mathf.Abs(keyboardGas)) ? gamepadGas : Mathf.SmoothDamp(
+            currentGas,
+            keyboardGas,
+            ref gasVelocity,
+            gasSmooth * Time.deltaTime
+        );
 
         Vector3 localSpeed = transform.InverseTransformDirection(rigid.velocity);
 
@@ -313,7 +323,23 @@ public class QuadScript : MonoBehaviour
     }
 
     // Penalty function
+    void OuttaTime()
+    {
+        if (scoreboard.time2ride <= 0)
+        {
+            girlRagdoller.activateRagdoll = true;
+            girlRagdoller.inheritedVelocity = deltaVelocity * .5f;
+            girlRagdoller.RagdollModeOn();
 
+            // Change state:
+            state = QuadStates.Crash;
+
+            camControl.GetComponent<CamControls>().targetVehicle = girlPelvis;
+            camControl.GetComponentInChildren<Light>().enabled = true;
+
+            gameOverMessage.text = "Outta Time!!!";
+        }
+    }
 
     // Animate quad steering
     void AnimateQuad()

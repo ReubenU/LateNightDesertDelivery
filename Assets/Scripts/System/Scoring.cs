@@ -8,16 +8,15 @@ public class Scoring : MonoBehaviour
 
     public Text scoreText;
     public Text highScore;
+    public Text timeLeft;
 
     int highestScore;
 
-    QuadScript quad;
+    public float time2ride = 60f;
 
     private void Awake()
     {
         highestScore = PlayerPrefs.GetInt("HighScore");
-
-        quad = GetComponent<QuadScript>();
 
         highScore.text = string.Format("Highest Score\n{0}", highestScore);
     }
@@ -30,5 +29,14 @@ public class Scoring : MonoBehaviour
         {
             PlayerPrefs.SetInt("HighScore", currentScore);
         }
+
+        Timer();
+    }
+
+    void Timer()
+    {
+        time2ride -= Time.deltaTime;
+        time2ride = Mathf.Clamp(time2ride, 0, Mathf.Infinity);
+        timeLeft.text = string.Format("{0}", Mathf.RoundToInt(time2ride));
     }
 }
