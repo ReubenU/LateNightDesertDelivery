@@ -8,20 +8,11 @@ public class CamControls : MonoBehaviour
     private InputAction look;
     private InputAction mouseLook;
 
-    public Slider gamepadSlider;
-    public Slider mouseSlider;
-
-    float mouse_look_sens = 3f;
-    float gamepad_look_sens = 30f;
-
     public Transform targetVehicle;
 
     private void Awake()
     {
         quadControls = new QuadControls();
-
-        mouse_look_sens = mouseSlider.value;
-        gamepad_look_sens = gamepadSlider.value;
     }
 
     private void OnEnable()
@@ -47,15 +38,12 @@ public class CamControls : MonoBehaviour
     {
         LookAround();
         LockOnVehicle();
-
-        mouse_look_sens = mouseSlider.value;
-        gamepad_look_sens = gamepadSlider.value;
     }
 
     void LookAround()
     {
-        float gamepadLookX = look.ReadValue<Vector2>().x * gamepad_look_sens;
-        float mouseLookX = mouseLook.ReadValue<Vector2>().x * mouse_look_sens;
+        float gamepadLookX = look.ReadValue<Vector2>().x * Settings.gamepadSensitivity;
+        float mouseLookX = mouseLook.ReadValue<Vector2>().x * Settings.mouseSensitivity;
 
         float bestLookInput = (Mathf.Abs(gamepadLookX) > Mathf.Abs(mouseLookX)) ? gamepadLookX : mouseLookX;
 

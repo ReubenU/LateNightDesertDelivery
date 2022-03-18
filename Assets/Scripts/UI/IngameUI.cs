@@ -26,6 +26,8 @@ public class IngameUI : MonoBehaviour
     {
         quadControls = new QuadControls();
         pauseGame = quadControls.UI.PauseGame;
+
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     private void OnEnable()
@@ -51,22 +53,27 @@ public class IngameUI : MonoBehaviour
             IngameScreen.SetActive(false);
             uiEventSystem.SetSelectedGameObject(FirstButton(GameOverScreen));
             activeOnce = true;
+
+            Cursor.lockState = CursorLockMode.None;
         }
 
         // Pause game
         if (pauseGame.triggered)
         {
             isPaused = !isPaused;
-            uiEventSystem.SetSelectedGameObject(FirstButton(PauseScreen));
         }
         
-        if (isPaused && !activeOnce)
+        if (isPaused && !activeOnce && !GameOverScreen.activeSelf)
         {
             PauseScreen.SetActive(true);
             IngameScreen.SetActive(false);
             SettingsScreen.SetActive(false);
             Time.timeScale = 0f;
             activeOnce = !activeOnce;
+
+            Cursor.lockState = CursorLockMode.None;
+
+            uiEventSystem.SetSelectedGameObject(FirstButton(PauseScreen));
         }
 
         // Unpause game
@@ -77,6 +84,8 @@ public class IngameUI : MonoBehaviour
             IngameScreen.SetActive(true);
             Time.timeScale = 1f;
             activeOnce = false;
+
+            Cursor.lockState = CursorLockMode.Locked;
         }
     }
 
@@ -87,6 +96,8 @@ public class IngameUI : MonoBehaviour
         IngameScreen.SetActive(true);
         isPaused = false;
         Time.timeScale = 1f;
+
+        atvBike.state = QuadScript.QuadStates.Active;
     }
 
     // Settings function

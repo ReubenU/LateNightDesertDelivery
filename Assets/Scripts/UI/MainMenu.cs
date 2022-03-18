@@ -13,7 +13,31 @@ public class MainMenu : MonoBehaviour
     public EventSystem uiEvents;
 
 
-    public void LoadGame()
+    public string gamepadSensKey = "GamePadSens";
+    public string mouseSensKey = "MouseSens";
+
+    private int defaultGamepadSens = 30;
+    private float defaultMouseSens = 3;
+
+
+    private void Awake()
+    {
+        if (!PlayerPrefs.HasKey(gamepadSensKey))
+        {
+            PlayerPrefs.SetInt(gamepadSensKey, defaultGamepadSens);
+        }
+
+        if (!PlayerPrefs.HasKey(mouseSensKey))
+        {
+            PlayerPrefs.SetFloat(mouseSensKey, defaultMouseSens);
+        }
+
+        Settings.gamepadSensitivity = PlayerPrefs.GetInt(gamepadSensKey);
+        Settings.mouseSensitivity = PlayerPrefs.GetFloat(mouseSensKey);
+    }
+
+
+        public void LoadGame()
     {
         SceneManager.LoadScene(1);
     }
