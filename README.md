@@ -1,5 +1,13 @@
 # LateNightDesertDelivery
- For the UDC game jam of 2022.
+ For the UDC game jam of 2022. Play it here: https://pattypancake.itch.io/late-night-desert-delivery
+
+Credits:
+Textures by Rki3000
+Sound FX by sfxredditor & Jon Pascone
+Music composed by iceBRG (Discord tag iceBRG#3251)
+
+Programming, UI, 3D models, Controls by Reuben Unicruz (itch handle PattyPancake)
+
 
 ## Gameplay Shots
 ![UDC-cool-screenshot](https://user-images.githubusercontent.com/15871822/173196631-50ff7cfb-ef0b-49bf-925d-dbba645ce06c.png)
